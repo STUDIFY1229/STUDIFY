@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STUDIFY</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;padding:0;background:url('https://i.ibb.co/YcF0Q7y/library-stethoscope.jpg') no-repeat center center fixed;background-size:cover;}
+header{background:rgba(76,175,80,0.85);color:#fff;padding:15px;text-align:center;font-size:28px;text-shadow:1px 1px 4px rgba(0,0,0,0.5);}
+.container{padding:20px;max-width:500px;margin:60px auto;background:rgba(255,255,255,0.9);border-radius:15px;box-shadow:0 8px 20px rgba(0,0,0,0.3);backdrop-filter:blur(5px);}
+h2{text-align:center;color:#333;}
+input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc;font-size:16px;}
+select{padding:12px;margin:8px 0;width:100%;border-radius:8px;border:1px solid #ccc;font-size:16px;}
+button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none;cursor:pointer;font-size:16px;transition:0.3s;}
+button:hover{transform:scale(1.03);opacity:0.85;}
+button.back-btn{background:#555;color:white;}
+button:not(.back-btn){background:#4CAF50;color:white;}
+.hidden{display:none;}
+.help{position:fixed;bottom:70px;right:20px;background:#ff9800;color:white;padding:12px 18px;border-radius:50px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.3);}
+footer{text-align:center;color:white;padding:12px;background:rgba(0,0,0,0.6);position:fixed;bottom:0;width:100%;}
+.note{background:white;padding:10px;margin:5px 0;border-radius:5px;display:flex;justify-content:space-between;align-items:center;}
+#sectionList{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:20px;}
+.card{background:#4CAF50;color:white;padding:15px;border-radius:12px;text-align:center;cursor:pointer;box-shadow:0 6px 12px rgba(0,0,0,0.2);transition:0.3s;}
+.card:hover{transform:translateY(-5px) scale(1.05);box-shadow:0 10px 20px rgba(0,0,0,0.3);}
+.card img{width:50px;height:50px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<header>📘 STUDIFY</header>
+<div class="container" id="main">
+
+<!-- Authentication -->
+<div id="authDiv">
+    <h2>Welcome to Studify</h2>
+    <button onclick="showLogin()">Login</button>
+    <button onclick="showSignup()">Sign Up</button>
+    <button onclick="showForgot()">Forgot Password</button>
+</div>
+
+<div id="loginDiv" class="hidden">
+    <h2>Login</h2>
+    <input id="loginIdentifier" placeholder="Email or Phone">
+    <input id="loginPass" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <button class="back-btn" onclick="showAuth()">Back</button>
+</div>
+
+<div id="signupDiv" class="hidden">
+    <h2>Sign Up</h2>
+    <input id="signupIdentifier" placeholder="Email or Phone">
+    <input id="signupPass" type="password" placeholder="Password">
+    <select id="signupRole">
+        <option value="client">Client</option>
+        <option value="admin">Admin</option>
+    </select>
+    <button onclick="signup()">Sign Up</button>
+    <button class="back-btn" onclick="showAuth()">Back</button>
+</div>
+
+<div id="forgotDiv" class="hidden">
+    <h2>Forgot Password</h2>
+    <input id="forgotIdentifier" placeholder="Email or Phone">
+    <button onclick="forgotPassword()">Reset</button>
+    <button class="back-btn" onclick="showAuth()">Back</button>
+</div>
+
+<!-- Dashboard / Sections -->
+<div id="dashboardDiv" class="hidden">
+    <h2 id="dashboardTitle">Sections</h2>
+    <div id="sectionList"></div>
+    <button class="back-btn" onclick="logout()">Logout</button>
+</div>
+
+<!-- Chapters -->
+<div id="chapterDiv" class="hidden">
+    <h2 id="chapterTitle">Chapters</h2>
+    <div id="chapterList"></div>
+    <div id="addChapterDiv" class="hidden"><button onclick="addChapterPrompt()">➕ Add Chapter</button></div>
+    <button class="back-btn" onclick="backToSections()">Back</button>
+</div>
+
+<!-- Notes -->
+<div id="notesDiv" class="hidden">
+    <h2 id="notesTitle">Notes</h2>
+    <div id="notesList"></div>
+    <div id="addNoteDiv" class="hidden">
+        <input type="file" id="noteFile" accept=".txt">
+        <button onclick="uploadNote()">Upload Note</button>
+    </div>
+    <button class="back-btn" onclick="backToChapters()">Back</button>
+</div>
+
+</div>
+
+<div class="help" onclick="alert('📞 Call: 0779026210\n📧 Email: rennyngeno1229@gmail.com')">Help</div>
+<footer>© 2025 STUDIFY</footer>
+
+<script>
+// --- Data ---
+let users = JSON.parse(localStorage.getItem('studifyUsers')||'{}');
+let currentUser=null;
+let data = JSON.parse(localStorage.getItem('studifyData')||'{}');
+if(!Object.keys(data).length) data = {
+    "Clinical Medicine":[],"Kenya Registered Community Health Nursing":[],"Perioperative Theatre Technology":[],
+    "Community Health":[],"Orthopedic":[],"Health Record and Information Technology":[],"Health Support System":[]
+};
+let purchased = JSON.parse(localStorage.getItem('studifyPurchased')||'{}');
+let currentSection=null,currentChapter=null;
+
+// --- Authentication ---
+function hideAll(){['authDiv','loginDiv','signupDiv','forgotDiv','dashboardDiv','chapterDiv','notesDiv'].forEach(id=>document.getElementById(id).classList.add('hidden'));}
+function showLogin(){hideAll();document.getElementById('loginDiv').classList.remove('hidden');}
+function showSignup(){
+    hideAll();
+    let signupRoleSelect = document.getElementById('signupRole');
+    let adminExists = Object.values(users).some(u => u.role === "admin");
+    if(adminExists){ signupRoleSelect.innerHTML = `<option value="client">Client</option>`;}
+    else{ signupRoleSelect.innerHTML = `<option value="client">Client</option><option value="admin">Admin</option>`;}
+    document.getElementById('signupDiv').classList.remove('hidden');
+}
+function showForgot(){hideAll();document.getElementById('forgotDiv').classList.remove('hidden');}
+function showAuth(){hideAll();document.getElementById('authDiv').classList.remove('hidden');}
+
+function login(){
+    let id=document.getElementById('loginIdentifier').value.trim();
+    let pass=document.getElementById('loginPass').value;
+    if(users[id] && users[id].pass===pass){currentUser={id:id,role:users[id].role}; alert("✅ Login Successful"); showDashboard();}
+    else alert("❌ Invalid credentials");
+}
+
+function signup(){
+    let id=document.getElementById('signupIdentifier').value.trim();
+    let pass=document.getElementById('signupPass').value;
+    let role=document.getElementById('signupRole').value;
+    if(!id || !pass || !role){ alert("Fill all fields"); return;}
+    if(users[id]){ alert("Identifier exists"); return;}
+
+    let adminExists = Object.values(users).some(u => u.role === "admin");
+    if(role==="admin" && adminExists){ alert("❌ Admin exists. You will be Client."); role="client";}
+    users[id]={pass:pass,role:role};
+    localStorage.setItem('studifyUsers',JSON.stringify(users));
+    alert("✅ Signup successful as "+role);
+    showLogin();
+}
+
+function forgotPassword(){ let id=document.getElementById('forgotIdentifier').value.trim(); alert("✅ Reset link sent to "+id); showLogin();}
+function logout(){currentUser=null; showAuth();}
+
+// --- Dashboard & Sections ---
+function showDashboard(){
+    hideAll(); document.getElementById('dashboardDiv').classList.remove('hidden');
+    let sectionList=document.getElementById('sectionList'); sectionList.innerHTML='';
+    let icons={
+        "Clinical Medicine":"https://img.icons8.com/color/48/000000/stethoscope.png",
+        "Kenya Registered Community Health Nursing":"https://img.icons8.com/color/48/000000/nurse.png",
+        "Perioperative Theatre Technology":"https://img.icons8.com/color/48/000000/hospital-room.png",
+        "Community Health":"https://img.icons8.com/color/48/000000/community.png",
+        "Orthopedic":"https://img.icons8.com/color/48/000000/bone.png",
+        "Health Record and Information Technology":"https://img.icons8.com/color/48/000000/database.png",
+        "Health Support System":"https://img.icons8.com/color/48/000000/hospital-bed.png"
+    };
+    let fallbackIcon="https://img.icons8.com/color/48/000000/book.png";
+
+    for(let s in data){
+        let iconUrl = icons[s] || fallbackIcon;
+        sectionList.innerHTML+=`
+        <div class="card" onclick="openSection('${s}')">
+            <img src="${iconUrl}" alt="icon"><br>${s}
+        </div>`;
+    }
+}
+
+// --- Chapters & Notes ---
+function openSection(s){
+    currentSection=s; hideAll(); document.getElementById('chapterDiv').classList.remove('hidden');
+    document.getElementById('chapterTitle').innerText=s+" - Chapters";
+    document.getElementById('addChapterDiv').style.display=currentUser.role==='admin'?'block':'none';
+    renderChapters();
+}
+function renderChapters(){
+    let d=document.getElementById('chapterList'); d.innerHTML='';
+    data[currentSection].forEach((c,i)=>{
+        if(currentUser.role==='admin'){
+            d.innerHTML+=`<div><button onclick="openChapter(${i})">${c.name}</button>
+            <button onclick="editPrice(${i})">💰</button>
+            <button onclick="removeChapter(${i})">❌</button></div>`;
+        } else{
+            let p=purchased[currentUser.id]||{};
+            let paid=p[currentSection]&&p[currentSection][i];
+            let t=paid?"Open Chapter":"Pay 35 Ksh";
+            d.innerHTML+=`<div><button onclick="openChapter(${i})">${c.name} - ${t}</button></div>`;
+        }
+    });
+}
+function addChapterPrompt(){let n=prompt("Enter Chapter Name:"); if(!n)return; data[currentSection].push({name:n,notes:[],price:35}); saveData(); renderChapters();}
+function editPrice(i){let pr=prompt("Enter new price (Ksh):",data[currentSection][i].price); if(!pr)return; data[currentSection][i].price=Number(pr); saveData(); renderChapters();}
+function removeChapter(i){if(!confirm("Remove chapter?"))return; data[currentSection].splice(i,1); saveData(); renderChapters();}
+
+function openChapter(i){
+    currentChapter=i; hideAll(); document.getElementById('notesDiv').classList.remove('hidden');
+    document.getElementById('notesTitle').innerText=data[currentSection][i].name+" - Notes";
+    if(currentUser.role==='admin'){document.getElementById('addNoteDiv').style.display='block'; renderNotes();}
+    else{
+        if(!purchased[currentUser.id])purchased[currentUser.id]={};
+        if(!purchased[currentUser.id][currentSection])purchased[currentUser.id][currentSection]={};
+        if(!purchased[currentUser.id][currentSection][i]) payChapter(i);
+        else renderNotes();
+        document.getElementById('addNoteDiv').style.display='none';
+    }
+}
+function uploadNote(){ let f=document.getElementById('noteFile').files[0]; if(!f){alert("Select file"); return;}
+    let r=new FileReader();
+    r.onload=e=>{ data[currentSection][currentChapter].notes.push(e.target.result); saveData(); renderNotes(); document.getElementById('noteFile').value='';};
+    r.readAsText(f);
+}
+function renderNotes(){ let notes=data[currentSection][currentChapter].notes,d=document.getElementById('notesList'); d.innerHTML='';
+    notes.forEach((n,i)=>{ if(currentUser.role==='admin') d.innerHTML+=`<div class="note">${n} <button onclick="deleteNote(${i})">❌</button></div>`; else d.innerHTML+=`<div class="note">${n}</div>`;});
+}
+function deleteNote(i){if(!confirm("Delete note?"))return; data[currentSection][currentChapter].notes.splice(i,1); saveData(); renderNotes();}
+function payChapter(i){
+    let phone=prompt("Enter your phone number for payment (07XXXXXXXX):");
+    if(!phone||phone.length<10){alert("❌ Invalid phone number"); openSection(currentSection); return;}
+    let amount=35; alert(`📲 Payment request sent to ${phone} via M-Pesa for Ksh ${amount}...`);
+    setTimeout(()=>{
+        alert("✅ Payment Successful! Chapter Purchased.");
+        if(!purchased[currentUser.id])purchased[currentUser.id]={};
+        if(!purchased[currentUser.id][currentSection])purchased[currentUser.id][currentSection]={};
+        purchased[currentUser.id][currentSection][i]=true;
+        localStorage.setItem('studifyPurchased',JSON.stringify(purchased));
+        openChapter(i);
+    },1000);
+}
+function backToSections(){showDashboard();}
+function backToChapters(){openSection(currentSection);}
+function saveData(){localStorage.setItem('studifyData',JSON.stringify(data));}
+</script>
+</body>
+</html>
